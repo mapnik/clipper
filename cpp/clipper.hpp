@@ -58,6 +58,9 @@
 #include <ostream>
 #include <functional>
 #include <queue>
+#if defined(CLIPPER_IMPL_INCLUDE)
+#include CLIPPER_IMPL_INCLUDE
+#endif
 
 namespace ClipperLib {
 
@@ -82,6 +85,12 @@ enum PolyFillType { pftEvenOdd, pftNonZero, pftPositive, pftNegative };
 
 #endif
 
+#if defined(CLIPPER_INTPOINT_IMPL)
+
+typedef CLIPPER_INTPOINT_IMPL IntPoint;
+
+#else
+
 struct IntPoint {
   cInt X;
   cInt Y;
@@ -101,10 +110,32 @@ struct IntPoint {
     return a.X != b.X  || a.Y != b.Y; 
   }
 };
+#endif
+
 //------------------------------------------------------------------------------
 
+#if defined(CLIPPER_PATH_IMPL)
+
+typedef CLIPPER_PATH_IMPL Path;
+
+#else
+
 typedef std::vector< IntPoint > Path;
+
+#endif
+
+
+#if defined(CLIPPER_PATHS_IMPL)
+
+typedef CLIPPER_PATHS_IMPL Paths;
+
+#else
+
 typedef std::vector< Path > Paths;
+
+#endif
+
+
 
 inline Path& operator <<(Path& poly, const IntPoint& p) {poly.push_back(p); return poly;}
 inline Paths& operator <<(Paths& polys, const Path& p) {polys.push_back(p); return polys;}
