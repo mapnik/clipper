@@ -890,7 +890,7 @@ void RangeTest(const IntPoint& Pt, bool& useFullRange)
     {
       std::stringstream s;
       s << "Coordinate outside allowed range: ";
-      s << std::fixed << Pt.X << " " << Pt.Y << " " << -Pt.X << " " << -Pt.Y << "\n";
+      s << std::fixed << Pt.X << " " << Pt.Y << " " << -Pt.X << " " << -Pt.Y;
       throw clipperException(s.str().c_str());
     }
   }
