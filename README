@@ -130,7 +130,7 @@ v5.1.0 (17 February 2013)
 v5.0.2 - 30 December 2012
 * Bugfix: Significant fixes in and tidy of the internal 
   Int128 class (which is used only when polygon coordinate 
-  values are greater than ±0x3FFFFFFF (~1.07e9)). 
+  values are greater than Â±0x3FFFFFFF (~1.07e9)). 
 * Update: The Area algorithm has been updated and is faster. 
 * Update: Documentation updates. The newish but undocumented 
   'CheckInputs' parameter of the OffsetPolygons function has been 

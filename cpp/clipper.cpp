@@ -47,6 +47,7 @@
 #include <cstdlib>
 #include <ostream>
 #include <functional>
+#include <sstream>
 
 namespace ClipperLib {
 
@@ -897,8 +898,13 @@ void RangeTest(const IntPoint& Pt, bool& useFullRange)
 {
   if (useFullRange)
   {
-    if (Pt.X > hiRange || Pt.Y > hiRange || -Pt.X > hiRange || -Pt.Y > hiRange) 
-      throw clipperException("Coordinate outside allowed range");
+    if (Pt.X > hiRange || Pt.Y > hiRange || -Pt.X > hiRange || -Pt.Y > hiRange)
+    {
+      std::stringstream s;
+      s << "Coordinate outside allowed range: ";
+      s << std::fixed << Pt.X << " " << Pt.Y << " " << -Pt.X << " " << -Pt.Y;
+      throw clipperException(s.str().c_str());
+    }
   }
   else if (Pt.X > loRange|| Pt.Y > loRange || -Pt.X > loRange || -Pt.Y > loRange) 
   {
@@ -1075,7 +1081,7 @@ bool ClipperBase::AddPath(const Path &pg, PolyType PolyTyp, bool Closed)
       InitEdge(&edges[i], &edges[i+1], &edges[i-1], pg[i]);
     }
   }
-  catch(...)
+  catch(std::exception const&)
   {
     delete [] edges;
     throw; //range test fails
@@ -1248,7 +1254,7 @@ void ClipperBase::Reset()
 {
   m_CurrentLM = m_MinimaList.begin();
   if (m_CurrentLM == m_MinimaList.end()) return; //ie nothing to process
-  std::sort(m_MinimaList.begin(), m_MinimaList.end(), LocMinSorter());
+  std::stable_sort(m_MinimaList.begin(), m_MinimaList.end(), LocMinSorter());
 
   m_Scanbeam = ScanbeamList(); //clears/resets priority_queue
   //reset all edges ...
@@ -1583,7 +1589,7 @@ bool Clipper::ExecuteInternal()
       InsertLocalMinimaIntoAEL(botY);
     }
   }
-  catch(...) 
+  catch(std::exception const&) 
   {
     succeeded = false;
   }
@@ -2027,7 +2033,7 @@ void Clipper::InsertLocalMinimaIntoAEL(const cInt botY)
 
     //if any output polygons share an edge, they'll need joining later ...
     if (Op1 && IsHorizontal(*rb) && 
-      m_GhostJoins.size() > 0 && (rb->WindDelta != 0))
+      !m_GhostJoins.empty() && (rb->WindDelta != 0))
     {
       for (JoinList::size_type i = 0; i < m_GhostJoins.size(); ++i)
       {
@@ -2649,7 +2655,7 @@ void Clipper::ProcessHorizontal(TEdge *horzEdge)
 
   MaximaList::const_iterator maxIt;
   MaximaList::const_reverse_iterator maxRit;
-  if (m_Maxima.size() > 0)
+  if (!m_Maxima.empty())
   {
       //get the first maxima in range (X) ...
       if (dir == dLeftToRight)
@@ -2681,7 +2687,7 @@ void Clipper::ProcessHorizontal(TEdge *horzEdge)
         //this code block inserts extra coords into horizontal edges (in output
         //polygons) whereever maxima touch these horizontal edges. This helps
         //'simplifying' polygons (ie if the Simplify property is set).
-        if (m_Maxima.size() > 0)
+        if (!m_Maxima.empty())
         {
             if (dir == dLeftToRight)
             {
@@ -2830,11 +2836,11 @@ bool Clipper::ProcessIntersections(const cInt topY)
     if (IlSize == 1 || FixupIntersectionOrder()) ProcessIntersectList();
     else return false;
   }
-  catch(...) 
+  catch(std::exception const& ex) 
   {
     m_SortedEdges = 0;
     DisposeIntersectNodes();
-    throw clipperException("ProcessIntersections error");
+    throw clipperException((std::string("ProcessIntersections error ") + ex.what()).c_str());
   }
   m_SortedEdges = 0;
   return true;
@@ -2933,7 +2939,7 @@ bool Clipper::FixupIntersectionOrder()
   //Now it's crucial that intersections are made only between adjacent edges,
   //so to ensure this the order of intersections may need adjusting ...
   CopyAELToSEL();
-  std::sort(m_IntersectList.begin(), m_IntersectList.end(), IntersectListSort);
+  std::stable_sort(m_IntersectList.begin(), m_IntersectList.end(), IntersectListSort);
   size_t cnt = m_IntersectList.size();
   for (size_t i = 0; i < cnt; ++i) 
   {
@@ -3200,7 +3206,7 @@ void Clipper::BuildResult(Paths &polys)
     int cnt = PointCount(p);
     if (cnt < 2) continue;
     pg.reserve(cnt);
-    for (int i = 0; i < cnt; ++i)
+    for (int j = 0; j < cnt; ++j)
     {
       pg.push_back(p->Pt);
       p = p->Prev;
@@ -3902,7 +3908,7 @@ void ClipperOffset::Execute(Paths& solution, double delta)
     clpr.AddPath(outer, ptSubject, true);
     clpr.ReverseSolution(true);
     clpr.Execute(ctUnion, solution, pftNegative, pftNegative);
-    if (solution.size() > 0) solution.erase(solution.begin());
+    if (!solution.empty()) solution.erase(solution.begin());
   }
 }
 //------------------------------------------------------------------------------
