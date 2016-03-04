@@ -3056,6 +3056,14 @@ void Clipper::ProcessEdgesAtTopOfScanbeam(const cInt topY)
           (ePrev->Curr.X == e->Curr.X) && (ePrev->WindDelta != 0))
         {
           IntPoint pt = e->Curr;
+          if (e->Bot.y == (topY + 1) && e->Bot.x == TopX(*ePrev, (topY + 1)))
+          {
+            pt = e->Bot;
+          }
+          else if (ePrev->Bot.y == (topY + 1) && ePrev->Bot.x == TopX(*e, (topY + 1)))
+          {
+            pt = ePrev->Bot;
+          }
 #ifdef use_xyz
           SetZ(pt, *ePrev, *e);
 #endif
@@ -3471,8 +3479,46 @@ bool Clipper::JoinPoints(Join *j, OutRec* outRec1, OutRec* outRec2)
   if (isHorizontal  && (j->OffPt == j->OutPt1->Pt) &&
   (j->OffPt == j->OutPt2->Pt))
   {
+    if (outRec1 != outRec2)
+    {
+        // First Op1 Next and Op2 Prev
+        op1b = j->OutPt1->Next;
+        while (op1b != op1 && (op1b->Pt == j->OffPt)) 
+          op1b = op1b->Next;
+        op2b = j->OutPt2->Prev;
+        while (op2b != op2 && (op2b->Pt == j->OffPt)) 
+          op2b = op2b->Prev;
+        if (op1b->Pt == op2b->Pt)
+        {
+            OutPt* op1b_prev = op1b->Prev;
+            OutPt* op2b_next = op2b->Next;
+            op1b->Prev = op2b;
+            op2b->Next = op1b;
+            op1b_prev->Next = op2b_next;
+            op2b_next->Prev = op1b_prev;
+            return true;
+        }
+        
+        // Second Op1 Prev and Op2 Next
+        op2b = j->OutPt2->Next;
+        while (op2b != op2 && (op2b->Pt == j->OffPt)) 
+          op2b = op2b->Next;
+        op1b = j->OutPt1->Prev;
+        while (op1b != op1 && (op1b->Pt == j->OffPt)) 
+          op1b = op1b->Prev;
+        if (op2b->Pt == op1b->Pt)
+        {
+            OutPt* op2b_prev = op2b->Prev;
+            OutPt* op1b_next = op1b->Next;
+            op2b->Prev = op1b;
+            op1b->Next = op2b;
+            op2b_prev->Next = op1b_next;
+            op1b_next->Prev = op2b_prev;
+            return true;
+        }
+        return false;
+    }
     //Strictly Simple join ...
-    if (outRec1 != outRec2) return false;
     op1b = j->OutPt1->Next;
     while (op1b != op1 && (op1b->Pt == j->OffPt)) 
       op1b = op1b->Next;
