@@ -633,7 +633,7 @@ void IntersectPoint(TEdge &Edge1, TEdge &Edge2, IntPoint &ip)
     ip.X = TopX(Edge1, ip.Y);
     return;
   }
-  else if (Edge1.Dx == 0)
+  else if (Edge1.Dx == 0.0)
   {
     ip.X = Edge1.Bot.X;
     if (IsHorizontal(Edge2))
@@ -641,10 +641,14 @@ void IntersectPoint(TEdge &Edge1, TEdge &Edge2, IntPoint &ip)
     else
     {
       b2 = Edge2.Bot.Y - (Edge2.Bot.X / Edge2.Dx);
-      ip.Y = Round(ip.X / Edge2.Dx + b2);
+      if (Edge2.Bot.X == Edge1.Bot.X) ip.Y = Round(ip.X / Edge2.Dx + b2);
+      else if (Edge2.Bot.X < Edge1.Bot.X) ip.Y = Round((ip.X - 0.5) / Edge2.Dx + b2);
+      else ip.Y = Round((ip.X + 0.5) / Edge2.Dx + b2);
+      if (Edge2.Dx > 0.0 && ip.Y < Edge2.Bot.Y) ip.Y = Edge2.Bot.Y;
+      else if (Edge2.Dx < 0.0 && ip.Y > Edge2.Bot.Y) ip.Y = Edge2.Bot.Y;
     }
   }
-  else if (Edge2.Dx == 0)
+  else if (Edge2.Dx == 0.0)
   {
     ip.X = Edge2.Bot.X;
     if (IsHorizontal(Edge1))
@@ -652,7 +656,11 @@ void IntersectPoint(TEdge &Edge1, TEdge &Edge2, IntPoint &ip)
     else
     {
       b1 = Edge1.Bot.Y - (Edge1.Bot.X / Edge1.Dx);
-      ip.Y = Round(ip.X / Edge1.Dx + b1);
+      if (Edge1.Bot.X == Edge2.Bot.X) ip.Y = Round(ip.X / Edge1.Dx + b1);
+      else if (Edge1.Bot.X < Edge2.Bot.X) ip.Y = Round((ip.X - 0.5) / Edge1.Dx + b1);
+      else ip.Y = Round((ip.X + 0.5) / Edge1.Dx + b1);
+      if (Edge1.Dx > 0.0 && ip.Y < Edge1.Bot.Y) ip.Y = Edge1.Bot.Y;
+      else if (Edge1.Dx < 0.0 && ip.Y > Edge1.Bot.Y) ip.Y = Edge1.Bot.Y;
     }
   } 
   else 
@@ -665,6 +673,85 @@ void IntersectPoint(TEdge &Edge1, TEdge &Edge2, IntPoint &ip)
       ip.X = Round(Edge1.Dx * q + b1);
     else 
       ip.X = Round(Edge2.Dx * q + b2);
+    // the idea is simply to looking closer
+    // towards the origins of the lines (Edge1.Bot and Edge2.Bot)
+    // until we do not find pixels that both lines travel through
+    bool keep_searching = false;
+    double by1 = Edge1.Bot.Y - (Edge1.Bot.X / Edge1.Dx);
+    double by2 = Edge2.Bot.Y - (Edge2.Bot.X / Edge2.Dx);
+    double bx1 = Edge1.Bot.X - (Edge1.Bot.Y * Edge1.Dx);
+    double bx2 = Edge2.Bot.X - (Edge2.Bot.Y * Edge2.Dx);
+    do
+    {
+        keep_searching = false;
+        cInt y1 = ip.Y;
+        cInt y2 = ip.Y;
+        if (Edge1.Bot.X > ip.X)
+        {
+            y1 = Round((ip.X + 0.5) / Edge1.Dx + by1);
+            if (ip.Y >= Edge1.Bot.Y && y1 < Edge1.Bot.Y) y1 = Edge1.Bot.Y;
+            else if (ip.Y <= Edge1.Bot.Y && y1 > Edge1.Bot.Y) y1 = Edge1.Bot.Y;
+        }
+        else if (Edge1.Bot.X < ip.X)
+        {
+            y1 = Round((ip.X - 0.5) / Edge1.Dx + by1);
+        }
+        if (ip.Y >= Edge1.Bot.Y && y1 < Edge1.Bot.Y) y1 = Edge1.Bot.Y;
+        else if (ip.Y <= Edge1.Bot.Y && y1 > Edge1.Bot.Y) y1 = Edge1.Bot.Y;
+        if (Edge2.Bot.X > ip.X)
+        {
+            y2 = Round((ip.X + 0.5) / Edge2.Dx + by2);
+        }
+        else if (Edge2.Bot.X < ip.X)
+        {
+            y2 = Round((ip.X - 0.5) / Edge2.Dx + by2);
+        }
+        if (ip.Y >= Edge2.Bot.Y && y2 < Edge2.Bot.Y) y2 = Edge2.Bot.Y;
+        else if (ip.Y <= Edge2.Bot.Y && y2 > Edge2.Bot.Y) y2 = Edge2.Bot.Y;
+        cInt x1 = ip.X;
+        cInt x2 = ip.X;
+        if (Edge1.Bot.Y > ip.Y)
+        {
+            x1 = Round((ip.Y + 0.5) * Edge1.Dx + bx1);
+        }
+        else if (Edge1.Bot.Y < ip.Y)
+        {
+            x1 = Round((ip.Y - 0.5) * Edge1.Dx + bx1);
+        }
+        if (ip.X >= Edge1.Bot.X && x1 < Edge1.Bot.X) x1 = Edge1.Bot.X;
+        else if (ip.X <= Edge1.Bot.X && x1 > Edge1.Bot.X) x1 = Edge1.Bot.X;
+        if (Edge2.Bot.Y > ip.Y)
+        {
+            x2 = Round((ip.Y + 0.5) * Edge2.Dx + bx2);
+        }
+        else if (Edge2.Bot.Y < ip.Y)
+        {
+            x2 = Round((ip.Y - 0.5) * Edge2.Dx + bx2);
+        }
+        if (ip.X >= Edge2.Bot.X && x2 < Edge2.Bot.X) x2 = Edge2.Bot.X;
+        else if (ip.X <= Edge2.Bot.X && x2 > Edge2.Bot.X) x2 = Edge2.Bot.X;
+        if (y1 > ip.Y && y2 > ip.Y)
+        {
+            ip.Y = std::min(y1,y2);
+            keep_searching = true;
+        }
+        else if (y1 < ip.Y && y2 < ip.Y)
+        {
+            ip.Y = std::max(y1,y2);
+            keep_searching = true;
+        } 
+        if (x1 > ip.X && x2 > ip.X)
+        {
+            ip.X = std::min(x1,x2);
+            keep_searching = true;
+        }
+        else if (x1 < ip.X && x2 < ip.X)
+        {
+            ip.X = std::max(x1,x2);
+            keep_searching = true;
+        }
+    }
+    while (keep_searching);
   }
 
   if (ip.Y < Edge1.Top.Y || ip.Y < Edge2.Top.Y) 
@@ -1963,6 +2050,14 @@ void Clipper::ClearJoins()
 }
 //------------------------------------------------------------------------------
 
+void Clipper::ClearSSJoins()
+{
+  for (JoinList::size_type i = 0; i < m_SSJoins.size(); i++)
+    delete m_SSJoins[i];
+  m_SSJoins.resize(0);
+}
+//------------------------------------------------------------------------------
+
 void Clipper::ClearGhostJoins()
 {
   for (JoinList::size_type i = 0; i < m_GhostJoins.size(); i++)
@@ -1981,6 +2076,16 @@ void Clipper::AddGhostJoin(OutPt *op, const IntPoint OffPt)
 }
 //------------------------------------------------------------------------------
 
+void Clipper::AddSSJoin(OutPt *op1, OutPt *op2, const IntPoint OffPt)
+{
+  Join* j = new Join;
+  j->OutPt1 = op1;
+  j->OutPt2 = op2;
+  j->OffPt = OffPt;
+  m_SSJoins.push_back(j);
+}
+//------------------------------------------------------------------------------
+
 void Clipper::InsertLocalMinimaIntoAEL(const cInt botY)
 {
   const LocalMinimum *lm;
@@ -1996,14 +2101,46 @@ void Clipper::InsertLocalMinimaIntoAEL(const cInt botY)
       InsertEdgeIntoAEL(rb, 0);
       SetWindingCount(*rb);
       if (IsContributing(*rb))
-        Op1 = AddOutPt(rb, rb->Bot); 
+      {
+          Op1 = AddOutPt(rb, rb->Bot); 
+          TEdge* ePrev = rb->PrevInAEL;
+          if ((rb->OutIdx >= 0) && (rb->WindDelta != 0) && ePrev && (ePrev->OutIdx >= 0) &&
+            (ePrev->Curr.X == rb->Curr.X) && (ePrev->WindDelta != 0))
+          {
+            IntPoint pt = rb->Curr;
+            AddOutPt(ePrev, pt);
+          }
+          TEdge* eNext = rb->NextInAEL;
+          if ((rb->OutIdx >= 0) && (rb->WindDelta != 0) && eNext && (eNext->OutIdx >= 0) &&
+            (eNext->Curr.X == rb->Curr.X) && (eNext->WindDelta != 0))
+          {
+            IntPoint pt = rb->Curr;
+            AddOutPt(eNext, pt);
+          }
+      }
     } 
     else if (!rb)
     {
       InsertEdgeIntoAEL(lb, 0);
       SetWindingCount(*lb);
       if (IsContributing(*lb))
-        Op1 = AddOutPt(lb, lb->Bot);
+      {
+          Op1 = AddOutPt(lb, lb->Bot);
+          TEdge* ePrev = lb->PrevInAEL;
+          if ((lb->OutIdx >= 0) && (lb->WindDelta != 0) && ePrev && (ePrev->OutIdx >= 0) &&
+            (ePrev->Curr.X == lb->Curr.X) && (ePrev->WindDelta != 0))
+          {
+            IntPoint pt = lb->Curr;
+            AddOutPt(ePrev, pt);
+          }
+          TEdge* eNext = lb->NextInAEL;
+          if ((lb->OutIdx >= 0) && (lb->WindDelta != 0) && eNext && (eNext->OutIdx >= 0) &&
+            (eNext->Curr.X == lb->Curr.X) && (eNext->WindDelta != 0))
+          {
+            IntPoint pt = lb->Curr;
+            AddOutPt(eNext, pt);
+          }
+      }
       InsertScanbeam(lb->Top.Y);
     }
     else
@@ -2014,7 +2151,23 @@ void Clipper::InsertLocalMinimaIntoAEL(const cInt botY)
       rb->WindCnt = lb->WindCnt;
       rb->WindCnt2 = lb->WindCnt2;
       if (IsContributing(*lb))
-        Op1 = AddLocalMinPoly(lb, rb, lb->Bot);      
+      {
+          Op1 = AddLocalMinPoly(lb, rb, lb->Bot);      
+          TEdge* ePrev = lb->PrevInAEL;
+          if ((lb->OutIdx >= 0) && (lb->WindDelta != 0) && ePrev && (ePrev->OutIdx >= 0) &&
+            (ePrev->Curr.X == lb->Curr.X) && (ePrev->WindDelta != 0))
+          {
+            IntPoint pt = lb->Curr;
+            AddOutPt(ePrev, pt);
+          }
+          TEdge* eNext = rb->NextInAEL;
+          if ((rb->OutIdx >= 0) && (rb->WindDelta != 0) && eNext && (eNext->OutIdx >= 0) &&
+            (eNext->Curr.X == rb->Curr.X) && (eNext->WindDelta != 0))
+          {
+            IntPoint pt = rb->Curr;
+            AddOutPt(eNext, pt);
+          }
+      }
       InsertScanbeam(lb->Top.Y);
     }
 
@@ -2793,6 +2946,27 @@ void Clipper::ProcessHorizontal(TEdge *horzEdge)
     if(horzEdge->OutIdx >= 0)
     {
       op1 = AddOutPt( horzEdge, horzEdge->Top);
+      //When StrictlySimple and 'horzEdge' is being touched by another edge, then
+      //make sure both edges have a vertex here ...
+      if (m_StrictSimple)
+      {  
+        TEdge* ePrev = horzEdge->PrevInAEL;
+        if ((horzEdge->WindDelta != 0) && ePrev && (ePrev->OutIdx >= 0) &&
+          (ePrev->Curr.X == horzEdge->Top.X) && (ePrev->WindDelta != 0))
+        {
+          IntPoint pt = horzEdge->Top;
+          OutPt* op = AddOutPt(ePrev, pt);
+          AddJoin(op, op1, pt); //StrictlySimple (type-3) join
+        }
+        TEdge* eNext = horzEdge->NextInAEL;
+        if ((horzEdge->WindDelta != 0) && eNext && (eNext->OutIdx >= 0) &&
+          (eNext->Curr.X == horzEdge->Top.X) && (eNext->WindDelta != 0))
+        {
+          IntPoint pt = horzEdge->Top;
+          OutPt* op = AddOutPt(eNext, pt);
+          AddJoin(op, op1, pt); //StrictlySimple (type-3) join
+        }
+      }
       UpdateEdgeIntoAEL(horzEdge);
       if (horzEdge->WindDelta == 0) return;
       //nb: HorzEdge is no longer horizontal here
@@ -2962,17 +3136,96 @@ void Clipper::DoMaxima(TEdge *e)
   if (!eMaxPair)
   {
     if (e->OutIdx >= 0)
+    {
       AddOutPt(e, e->Top);
+      if (e->WindDelta != 0)
+      {
+          TEdge* ePrev = e->PrevInAEL;
+          while (ePrev)
+          {
+            if (e->Top == ePrev->Top)
+            {
+                ePrev = ePrev->PrevInAEL;
+                continue;
+            }
+            if (ePrev->Curr.X != e->Curr.X) break;
+            if ((ePrev->OutIdx >= 0) && (ePrev->WindDelta != 0))
+            {
+              IntPoint pt = e->Curr;
+              AddOutPt(ePrev, pt);
+            }
+            ePrev = ePrev->PrevInAEL;
+          }
+          TEdge* eNext = e->NextInAEL;
+          while (eNext)
+          {
+            if (e->Top == eNext->Top)
+            {
+                eNext = eNext->NextInAEL;
+                continue;
+            }
+            if (eNext->Curr.X != e->Curr.X) break;
+            if ((eNext->OutIdx >= 0) && (eNext->WindDelta != 0))
+            {
+              IntPoint pt = e->Curr;
+              AddOutPt(eNext, pt);
+            }
+            eNext = eNext->NextInAEL;
+          }
+      }
+    }
     DeleteFromAEL(e);
     return;
   }
-
+  
+  IntPoint pt = e->Top;
   TEdge* eNext = e->NextInAEL;
-  while(eNext && eNext != eMaxPair)
+  TEdge* ePrev = e->PrevInAEL;
+  if (e->WindDelta != 0)
   {
-    IntersectEdges(e, eNext, e->Top);
-    SwapPositionsInAEL(e, eNext);
-    eNext = e->NextInAEL;
+      while (eNext)
+      {
+        if (pt == eNext->Top)
+        {
+            eNext = eNext->NextInAEL;
+            continue;
+        }
+        if (TopX(*eNext, pt.Y) != pt.X)
+        {
+            eNext = 0;
+            break;
+        }
+        else if ((eNext->OutIdx >= 0) && (eNext->WindDelta != 0))
+        {
+            break;
+        }
+        eNext = eNext->NextInAEL;
+      }
+      while (ePrev)
+      {
+        if (pt == ePrev->Top)
+        {
+            ePrev = ePrev->PrevInAEL;
+            continue;
+        }
+        if (TopX(*ePrev, pt.Y) != pt.X)
+        {
+            ePrev = 0;
+            break;
+        }
+        else if ((ePrev->OutIdx >= 0) && (ePrev->WindDelta != 0))
+        {
+            break;
+        }
+        ePrev = ePrev->PrevInAEL;
+      }
+  }
+  TEdge* eNext2 = e->NextInAEL;
+  while(eNext2 && eNext2 != eMaxPair)
+  {
+    IntersectEdges(e, eNext2, e->Top);
+    SwapPositionsInAEL(e, eNext2);
+    eNext2 = e->NextInAEL;
   }
 
   if(e->OutIdx == Unassigned && eMaxPair->OutIdx == Unassigned)
@@ -2982,9 +3235,17 @@ void Clipper::DoMaxima(TEdge *e)
   }
   else if( e->OutIdx >= 0 && eMaxPair->OutIdx >= 0 )
   {
-    if (e->OutIdx >= 0) AddLocalMaxPoly(e, eMaxPair, e->Top);
-    DeleteFromAEL(e);
-    DeleteFromAEL(eMaxPair);
+      AddLocalMaxPoly(e, eMaxPair, e->Top);
+      if (ePrev)
+      {
+        AddOutPt(ePrev, pt);
+      }
+      if (eNext)
+      {
+        AddOutPt(eNext, pt);
+      }
+      DeleteFromAEL(e);
+      DeleteFromAEL(eMaxPair);
   }
 #ifdef use_lines
   else if (e->WindDelta == 0)
@@ -3056,14 +3317,6 @@ void Clipper::ProcessEdgesAtTopOfScanbeam(const cInt topY)
           (ePrev->Curr.X == e->Curr.X) && (ePrev->WindDelta != 0))
         {
           IntPoint pt = e->Curr;
-          if (e->Bot.y == (topY + 1) && e->Bot.x == TopX(*ePrev, (topY + 1)))
-          {
-            pt = e->Bot;
-          }
-          else if (ePrev->Bot.y == (topY + 1) && ePrev->Bot.x == TopX(*e, (topY + 1)))
-          {
-            pt = ePrev->Bot;
-          }
 #ifdef use_xyz
           SetZ(pt, *ePrev, *e);
 #endif
@@ -3498,6 +3751,7 @@ bool Clipper::JoinPoints(Join *j, OutRec* outRec1, OutRec* outRec2)
             op2b_next->Prev = op1b_prev;
             return true;
         }
+        bool reverse1 = (op1b->Pt.Y > j->OffPt.Y);
         
         // Second Op1 Prev and Op2 Next
         op2b = j->OutPt2->Next;
@@ -3515,6 +3769,124 @@ bool Clipper::JoinPoints(Join *j, OutRec* outRec1, OutRec* outRec2)
             op2b_prev->Next = op1b_next;
             op1b_next->Prev = op2b_prev;
             return true;
+        }
+        bool reverse2 = (op2b->Pt.Y > j->OffPt.Y);
+        if (reverse1 == reverse2) return false;
+        // See if there was a situation where these 
+        // two were split into seperate polygons
+        // with a SS join
+        for (auto & sj : m_SSJoins)
+        {
+            if (!sj->OutPt1 || !sj->OutPt2) continue;
+            OutRec *sjOutRec1 = GetOutRec(sj->OutPt1->Idx);
+            OutRec *sjOutRec2 = GetOutRec(sj->OutPt2->Idx);
+            if (sjOutRec1->Idx == outRec1->Idx && sjOutRec2->Idx == outRec2->Idx)
+            {
+                // We a previous SS join that has the same ids, so we might need to make
+                // a different join type.
+                op1b = j->OutPt1->Next;
+                while (op1b != op1 && op1b != sj->OutPt1)
+                {
+                    op1b = op1b->Next;
+                }
+                if (op1b == op1) continue;
+                op2b = j->OutPt2->Next;
+                while (op2b != op2 && op2b != sj->OutPt2)
+                {
+                    op2b = op2b->Next;
+                }
+                if (op2b == op2) continue;
+                OutPt* op1b_next = op1b->Next;
+                OutPt* op2b_next = op2b->Next;
+                OutPt* op1_next = op1->Next;
+                OutPt* op2_next = op2->Next;
+                op2b->Next= op1b_next;
+                op1b->Next = op2b_next;
+                op2b_next->Prev = op1b;
+                op1b_next->Prev = op2b;
+                op2->Next= op1_next;
+                op1->Next = op2_next;
+                op2_next->Prev = op1;
+                op1_next->Prev = op2;
+                sj->OutPt1 = 0;
+                sj->OutPt2 = 0;
+            }
+            else if (sjOutRec1->Idx == outRec2->Idx && sjOutRec2->Idx == outRec1->Idx)
+            {
+                // We a previous SS join that has the same ids, so we might need to make
+                // a different join type.
+                op1b = j->OutPt1->Next;
+                while (op1b != op1 && op1b != sj->OutPt2)
+                {
+                    op1b = op1b->Next;
+                }
+                if (op1b == op1) continue;
+                op2b = j->OutPt2->Next;
+                while (op2b != op2 && op2b != sj->OutPt1)
+                {
+                    op2b = op2b->Next;
+                }
+                if (op2b == op2) continue;
+                OutPt* op1b_next = op1b->Next;
+                OutPt* op2b_next = op2b->Next;
+                OutPt* op1_next = op1->Next;
+                OutPt* op2_next = op2->Next;
+                op2b->Next= op1b_next;
+                op1b->Next = op2b_next;
+                op2b_next->Prev = op1b;
+                op1b_next->Prev = op2b;
+                op2->Next= op1_next;
+                op1->Next = op2_next;
+                op2_next->Prev = op1;
+                op1_next->Prev = op2;
+                sj->OutPt1 = 0;
+                sj->OutPt2 = 0;
+            }
+            else
+            {
+                continue;
+            }
+            // We still will return false here
+            // because if we returned true it would 
+            // continue and think these two polygons should be merged
+            bool holeState = (Area(j->OutPt1) > 0) && m_ReverseOutput;
+            if (outRec1->IsHole == holeState) // outRec1 is "parent"
+            {
+                outRec1->Pts = j->OutPt2;
+                outRec1->BottomPt = 0;
+                outRec2->Pts = 0;
+                outRec2->BottomPt = 0;
+                outRec2->Idx = outRec1->Idx;
+                outRec2->FirstLeft = outRec1;
+                outRec2->IsHole = outRec1->IsHole;
+                if (m_UsingPolyTree) FixupFirstLefts3(outRec2, outRec1);
+                OutRec * outRec3 = CreateOutRec();
+                outRec3->Pts = j->OutPt1;
+                UpdateOutPtIdxs(*outRec1);
+                UpdateOutPtIdxs(*outRec3);
+                outRec3->FirstLeft = outRec1->FirstLeft;
+                //fixup FirstLeft pointers that may need reassigning to OutRec3
+                if (m_UsingPolyTree) FixupFirstLefts1(outRec1, outRec3);
+            }
+            else
+            {
+                outRec2->Pts = j->OutPt1;
+                outRec2->BottomPt = 0;
+                outRec1->Pts = 0;
+                outRec1->BottomPt = 0;
+                outRec1->Idx = outRec2->Idx;
+                outRec1->FirstLeft = outRec2;
+                outRec1->IsHole = outRec2->IsHole;
+                if (m_UsingPolyTree) FixupFirstLefts3(outRec1, outRec2);
+                OutRec * outRec3 = CreateOutRec();
+                outRec3->Pts = j->OutPt2;
+                UpdateOutPtIdxs(*outRec2);
+                UpdateOutPtIdxs(*outRec3);
+                outRec3->FirstLeft = outRec2->FirstLeft;
+                //fixup FirstLeft pointers that may need reassigning to OutRec3
+                if (m_UsingPolyTree) FixupFirstLefts1(outRec2, outRec3);
+            }
+            return false;
         }
         return false;
     }
@@ -3538,6 +3910,7 @@ bool Clipper::JoinPoints(Join *j, OutRec* outRec1, OutRec* outRec2)
       op2b->Prev = op1b;
       j->OutPt1 = op1;
       j->OutPt2 = op1b;
+      AddSSJoin(op1, op1b, j->OffPt);
       return true;
     } else
     {
@@ -3549,6 +3922,7 @@ bool Clipper::JoinPoints(Join *j, OutRec* outRec1, OutRec* outRec2)
       op2b->Next = op1b;
       j->OutPt1 = op1;
       j->OutPt2 = op1b;
+      AddSSJoin(op1, op1b, j->OffPt);
       return true;
     }
   } 
@@ -3806,6 +4180,7 @@ void Clipper::JoinCommonEdges()
       if (m_UsingPolyTree) FixupFirstLefts3(outRec2, outRec1);
     }
   }
+  ClearSSJoins();
 }
 
 //------------------------------------------------------------------------------
