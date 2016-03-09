@@ -644,8 +644,6 @@ void IntersectPoint(TEdge &Edge1, TEdge &Edge2, IntPoint &ip)
       if (Edge2.Bot.X == Edge1.Bot.X) ip.Y = Round(ip.X / Edge2.Dx + b2);
       else if (Edge2.Bot.X < Edge1.Bot.X) ip.Y = Round((ip.X - 0.5) / Edge2.Dx + b2);
       else ip.Y = Round((ip.X + 0.5) / Edge2.Dx + b2);
-      if (Edge2.Dx > 0.0 && ip.Y < Edge2.Bot.Y) ip.Y = Edge2.Bot.Y;
-      else if (Edge2.Dx < 0.0 && ip.Y > Edge2.Bot.Y) ip.Y = Edge2.Bot.Y;
     }
   }
   else if (Edge2.Dx == 0.0)
@@ -659,8 +657,6 @@ void IntersectPoint(TEdge &Edge1, TEdge &Edge2, IntPoint &ip)
       if (Edge1.Bot.X == Edge2.Bot.X) ip.Y = Round(ip.X / Edge1.Dx + b1);
       else if (Edge1.Bot.X < Edge2.Bot.X) ip.Y = Round((ip.X - 0.5) / Edge1.Dx + b1);
       else ip.Y = Round((ip.X + 0.5) / Edge1.Dx + b1);
-      if (Edge1.Dx > 0.0 && ip.Y < Edge1.Bot.Y) ip.Y = Edge1.Bot.Y;
-      else if (Edge1.Dx < 0.0 && ip.Y > Edge1.Bot.Y) ip.Y = Edge1.Bot.Y;
     }
   } 
   else 
