@@ -2050,14 +2050,6 @@ void Clipper::ClearJoins()
 }
 //------------------------------------------------------------------------------
 
-void Clipper::ClearSSJoins()
-{
-  for (JoinList::size_type i = 0; i < m_SSJoins.size(); i++)
-    delete m_SSJoins[i];
-  m_SSJoins.resize(0);
-}
-//------------------------------------------------------------------------------
-
 void Clipper::ClearGhostJoins()
 {
   for (JoinList::size_type i = 0; i < m_GhostJoins.size(); i++)
@@ -2073,16 +2065,6 @@ void Clipper::AddGhostJoin(OutPt *op, const IntPoint OffPt)
   j->OutPt2 = 0;
   j->OffPt = OffPt;
   m_GhostJoins.push_back(j);
-}
-//------------------------------------------------------------------------------
-
-void Clipper::AddSSJoin(OutPt *op1, OutPt *op2, const IntPoint OffPt)
-{
-  Join* j = new Join;
-  j->OutPt1 = op1;
-  j->OutPt2 = op2;
-  j->OffPt = OffPt;
-  m_SSJoins.push_back(j);
 }
 //------------------------------------------------------------------------------
 
@@ -3886,7 +3868,6 @@ bool Clipper::JoinPoints(Join *j, OutRec* outRec1, OutRec* outRec2)
       op2b->Prev = op1b;
       j->OutPt1 = op1;
       j->OutPt2 = op1b;
-      AddSSJoin(op1, op1b, j->OffPt);
       return true;
     } else
     {
@@ -3898,7 +3879,6 @@ bool Clipper::JoinPoints(Join *j, OutRec* outRec1, OutRec* outRec2)
       op2b->Next = op1b;
       j->OutPt1 = op1;
       j->OutPt2 = op1b;
-      AddSSJoin(op1, op1b, j->OffPt);
       return true;
     }
   } 
@@ -4156,7 +4136,6 @@ void Clipper::JoinCommonEdges()
       if (m_UsingPolyTree) FixupFirstLefts3(outRec2, outRec1);
     }
   }
-  ClearSSJoins();
 }
 
 //------------------------------------------------------------------------------
