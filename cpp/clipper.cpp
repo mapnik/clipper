@@ -3632,8 +3632,6 @@ void Clipper::FixupInteriorRings()
                                 if (m_UsingPolyTree) FixupFirstLefts1(outRec1, outRec3);
                                 PointCount(outRec1->Pts);
                                 PointCount(outRec3->Pts);
-                                if (outRec1->IsHole) std::clog << "OutRec1 is Hole" << std::endl;
-                                if (outRec3->IsHole) std::clog << "OutRec3 is Hole" << std::endl;
                             }
                             else
                             {
@@ -3655,8 +3653,6 @@ void Clipper::FixupInteriorRings()
                                 if (m_UsingPolyTree) FixupFirstLefts1(outRec2, outRec3);
                                 PointCount(outRec2->Pts);
                                 PointCount(outRec3->Pts);
-                                if (outRec2->IsHole) std::clog << "OutRec2 is Hole" << std::endl;
-                                if (outRec3->IsHole) std::clog << "OutRec3 is Hole" << std::endl;
                             }
                             break;
                         }
