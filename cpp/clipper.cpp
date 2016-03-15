@@ -1703,8 +1703,8 @@ bool Clipper::ExecuteInternal()
 
     if (m_StrictSimple) 
     {
-        DoSimplePolygons();
         FixupInteriorRings();
+        DoSimplePolygons();
     }
   }
 
@@ -3529,6 +3529,21 @@ struct OutPtIntersect
     
 void Clipper::FixupInteriorRings()
 {
+    {
+        PolyOutList::size_type i = 0;
+        while (i < m_PolyOuts.size()) 
+        {
+            OutRec* outrec = m_PolyOuts[i++];
+            OutPt* op = outrec->Pts;
+            if (!op || outrec->IsOpen) continue;
+            do
+            {
+                m_OutPts.push_back(op);
+                op = op->Next;
+            }
+            while (op != outrec->Pts);
+        }
+    }
     std::sort(m_OutPts.begin(), m_OutPts.end(), SortOutPt);
     std::vector<OutPtIntersect> dupeRec;
     std::size_t count = 0;
@@ -4611,7 +4626,6 @@ void Clipper::DoSimplePolygons()
     if (!op || outrec->IsOpen) continue;
     do //for each Pt in Polygon until duplicate found do ...
     {
-      m_OutPts.push_back(op);
       OutPt* op2 = op->Next;
       while (op2 != outrec->Pts) 
       {
