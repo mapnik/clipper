@@ -236,7 +236,6 @@ struct OutPt;
 struct OutRec;
 struct Join;
 
-typedef std::vector < OutPt*> OutPtList;
 typedef std::vector < OutRec* > PolyOutList;
 typedef std::vector < TEdge* > EdgeList;
 typedef std::vector < Join* > JoinList;
@@ -367,7 +366,6 @@ private:
   void SetHoleState(TEdge *e, OutRec *outrec);
   void DisposeIntersectNodes();
   bool FixupIntersectionOrder();
-  void FixupInteriorRings();
   void FixupOutPolygon(OutRec &outrec);
   void FixupOutPolyline(OutRec &outrec);
   bool IsHole(TEdge *e);
