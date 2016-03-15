@@ -282,7 +282,6 @@ protected:
   bool              m_PreserveCollinear;
   bool              m_HasOpenPaths;
   PolyOutList       m_PolyOuts;
-  OutPtList         m_OutPts;
   TEdge           *m_ActiveEdges;
 
   typedef std::priority_queue<cInt> ScanbeamList;
