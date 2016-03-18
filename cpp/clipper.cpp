@@ -3255,6 +3255,18 @@ void Clipper::ProcessEdgesAtTopOfScanbeam(const cInt topY)
       e = e->NextInAEL;
     }
   }
+  if (m_StrictSimple)
+  {
+      MinimaList::iterator lm = m_CurrentLM;
+      while (lm != m_MinimaList.end() && lm->Y == topY)
+      {
+          if (lm->LeftBound && lm->RightBound)
+          {
+              m_Maxima.push_back(lm->LeftBound->Bot.X);
+          }
+          ++lm;
+      }
+  }
 
   //3. Process horizontals at the Top of the scanbeam ...
   m_Maxima.sort();
