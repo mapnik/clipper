@@ -4724,7 +4724,6 @@ bool Clipper::FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeR
     for (auto iRing : iList)
     {
         OutRec * outRec_itr = GetOutRec(iRing.first);
-        int itr_idx = outRec_itr->Idx;
         outRec_itr->Pts = 0;
         outRec_itr->BottomPt = 0;
         outRec_itr->Idx = outRec_origin->Idx;
