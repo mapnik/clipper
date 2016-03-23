@@ -380,11 +380,11 @@ private:
   void JoinCommonEdges();
   void DoSimplePolygons();
   bool FindIntersectLoop(std::unordered_multimap<int, OutPtIntersect> & dupeRec,
-                         std::list<std::pair<const int, OutPtIntersect> > & iList,
+                         std::list<std::pair<int, OutPtIntersect> > & iList,
                          OutRec * outRec_parent,
                          int idx_origin,
                          int idx_prev,
-                         int idx_search);
+                         std::set<int> & visited);
   bool FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeRec,
                      OutPt * op_j,
                      OutPt * op_k,

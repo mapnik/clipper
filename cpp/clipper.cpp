@@ -4501,37 +4501,34 @@ struct OutPtIntersect
 //-----------------------------------------------------------------------------
 
 bool Clipper::FindIntersectLoop(std::unordered_multimap<int, OutPtIntersect> & dupeRec,
-                                std::list<std::pair<const int, OutPtIntersect> > & iList,
+                                std::list<std::pair<int, OutPtIntersect> > & iList,
                                 OutRec * outRec_parent,
                                 int idx_origin,
-                                int idx_prev,
-                                int idx_search)
+                                int idx_search,
+                                std::set<int> & visited)
 {
     auto range = dupeRec.equal_range(idx_search);
     // Check for direct connection
     for (auto it = range.first; it != range.second; ++it)
     {
         OutRec * itRec = GetOutRec(it->second.op2->Idx);
-        if (itRec->Idx == idx_prev)
-        {
-            continue;
-        }
         if (itRec->Idx == idx_origin && (outRec_parent == itRec || outRec_parent == ParseFirstLeft(itRec->FirstLeft)))
         {
             iList.emplace_front(idx_search, it->second);
             return true;
         }
     }
+    visited.insert(idx_search);
     // Check for connection through chain of other intersections
     for (auto it = range.first; it != range.second; ++it)
     {
         OutRec * itRec = GetOutRec(it->second.op2->Idx);
-        if (itRec->Idx == idx_search || itRec->Idx == idx_prev || 
+        if (visited.count(itRec->Idx) > 0 || 
             (outRec_parent != itRec && outRec_parent != ParseFirstLeft(itRec->FirstLeft)))
         {
             continue;
         }
-        if (FindIntersectLoop(dupeRec, iList, outRec_parent, idx_origin, idx_search, itRec->Idx))
+        if (FindIntersectLoop(dupeRec, iList, outRec_parent, idx_origin, idx_search, visited))
         {
             iList.emplace_front(idx_search, it->second);
             return true;
@@ -4593,7 +4590,7 @@ bool Clipper::FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeR
         return false;
     }
     bool found = false;
-    std::list<std::pair<const int, OutPtIntersect> > iList;
+    std::list<std::pair<int, OutPtIntersect> > iList;
     auto range = dupeRec.equal_range(outRec_search->Idx);
     // Check for direct connection
     for (auto it = range.first; it != range.second; ++it)
@@ -4611,12 +4608,15 @@ bool Clipper::FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeR
     }
     if (!found)
     {
+        std::set<int> visited;
+        visited.insert(outRec_search->Idx);
         // Check for connection through chain of other intersections
         for (auto it = range.first; it != range.second; ++it)
         {
             OutRec * itRec = GetOutRec(it->second.op2->Idx);
-            if (itRec->IsHole && (outRec_parent == itRec || outRec_parent == ParseFirstLeft(itRec->FirstLeft)) &&
-                FindIntersectLoop(dupeRec, iList, outRec_parent, outRec_origin->Idx, outRec_search->Idx, itRec->Idx))
+            if ((itRec->Idx != outRec_search->Idx) &&
+                (outRec_parent == itRec || outRec_parent == ParseFirstLeft(itRec->FirstLeft)) &&
+                FindIntersectLoop(dupeRec, iList, outRec_parent, outRec_origin->Idx, outRec_search->Idx, visited))
             {
                 found = true;
                 iList.emplace_front(outRec_search->Idx, it->second);
@@ -4637,6 +4637,42 @@ bool Clipper::FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeR
     {
         return false;
     }
+
+    if (outRec_origin->IsHole)
+    {
+        for (auto & iRing : iList)
+        {
+            OutRec * outRec_itr = GetOutRec(iRing.first);
+            if (!outRec_itr->IsHole)
+            {
+                // Make the hole the origin!
+                OutPt * op1 = op_origin_1;
+                op_origin_1 = iRing.second.op1;
+                iRing.second.op1 = op1;
+                OutPt * op2 = op_origin_2;
+                op_origin_2 = iRing.second.op2;
+                iRing.second.op2 = op2;
+                iRing.first = outRec_origin->Idx;
+                outRec_origin = outRec_itr;
+                outRec_parent = outRec_origin;
+                
+                auto range_itr = dupeRec.equal_range(outRec_origin->Idx);
+                for (auto it = range_itr.first; it != range_itr.second;)
+                {
+                    if (it->second.op1 == op_origin_1 && it->second.op2 == op_origin_2)
+                    {
+                        it = dupeRec.erase(it);
+                    }
+                    else
+                    {
+                        ++it;
+                    }
+                }
+                break;
+            }
+        }
+    }
+
     // Switch 
     OutPt * op_origin_1_next = op_origin_1->Next;
     OutPt * op_origin_2_next = op_origin_2->Next;
@@ -4659,7 +4695,7 @@ bool Clipper::FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeR
 
     OutRec * outRec_new = CreateOutRec();
     outRec_new->IsHole = false;
-    if (outRec_origin->IsHole == ((Area(op_origin_1) > 0) && m_ReverseOutput))
+    if (outRec_origin->IsHole && ((Area(op_origin_1) < 0) ^ m_ReverseOutput))
     {
         outRec_origin->Pts = op_origin_1;
         outRec_new->Pts = op_origin_2;
@@ -4669,13 +4705,13 @@ bool Clipper::FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeR
         outRec_origin->Pts = op_origin_2;
         outRec_new->Pts = op_origin_1;
     }
-    
+
     UpdateOutPtIdxs(*outRec_origin);
     UpdateOutPtIdxs(*outRec_new);
     
     outRec_origin->BottomPt = 0;
 
-    std::list<std::pair<const int, OutPtIntersect> > move_list;
+    std::list<std::pair<int, OutPtIntersect> > move_list;
     for (auto iRing : iList)
     {
         OutRec * outRec_itr = GetOutRec(iRing.first);
@@ -4704,7 +4740,8 @@ bool Clipper::FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeR
                 OutRec * itRec1 = GetOutRec(it->second.op1->Idx);
                 OutRec * itRec2 = GetOutRec(it->second.op2->Idx);
                 if (!(itRec1->Idx == outRec_new->Idx && itRec2->Idx == outRec_origin->Idx) &&
-                     !(itRec2->Idx == outRec_new->Idx && itRec1->Idx == outRec_origin->Idx) &&
+                    !(itRec2->Idx == outRec_new->Idx && itRec1->Idx == outRec_origin->Idx) &&
+                    (itRec1->Idx != itRec2->Idx) &&
                     (itRec1->IsHole || itRec2->IsHole))
                 {
                     move_list.emplace_back(itRec1->Idx, it->second);
@@ -4828,7 +4865,7 @@ void Clipper::DoSimplePolygons()
                                     FixupFirstLefts2(outrec2, outrec);
                                 }
                                 auto range = dupeRec.equal_range(idx_k);
-                                std::list<std::pair<const int, OutPtIntersect> > move_list;
+                                std::list<std::pair<int, OutPtIntersect> > move_list;
                                 for (auto it = range.first; it != range.second;)
                                 {
                                     OutRec * itRec = GetOutRec(it->second.op1->Idx);
@@ -4867,7 +4904,7 @@ void Clipper::DoSimplePolygons()
                                     FixupFirstLefts2(outrec, outrec2);
                                 }
                                 auto range = dupeRec.equal_range(idx_k);
-                                std::list<std::pair<const int, OutPtIntersect> > move_list;
+                                std::list<std::pair<int, OutPtIntersect> > move_list;
                                 for (auto it = range.first; it != range.second;)
                                 {
                                     OutRec * itRec = GetOutRec(it->second.op1->Idx);
@@ -4904,7 +4941,7 @@ void Clipper::DoSimplePolygons()
                                     FixupFirstLefts1(outrec, outrec2);
                                 }
                                 auto range = dupeRec.equal_range(idx_k);
-                                std::list<std::pair<const int, OutPtIntersect> > move_list;
+                                std::list<std::pair<int, OutPtIntersect> > move_list;
                                 for (auto it = range.first; it != range.second;)
                                 {
                                     OutRec * itRec = GetOutRec(it->second.op1->Idx);
