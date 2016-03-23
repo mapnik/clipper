@@ -384,7 +384,9 @@ private:
                          OutRec * outRec_parent,
                          int idx_origin,
                          int idx_prev,
-                         std::set<int> & visited);
+                         std::set<int> & visited,
+                         OutPt * orig_pt, 
+                         OutPt * prev_pt);
   bool FixIntersects(std::unordered_multimap<int, OutPtIntersect> & dupeRec,
                      OutPt * op_j,
                      OutPt * op_k,
