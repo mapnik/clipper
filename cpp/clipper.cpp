@@ -3300,20 +3300,23 @@ void Clipper::ProcessEdgesAtTopOfScanbeam(const cInt topY)
 
       //When StrictlySimple and 'e' is being touched by another edge, then
       //make sure both edges have a vertex here ...
-      if (m_StrictSimple)
+      if (m_StrictSimple && e->OutIdx >= 0 && e->WindDelta != 0)
       {  
         TEdge* ePrev = e->PrevInAEL;
-        if ((e->OutIdx >= 0) && (e->WindDelta != 0) && ePrev && (ePrev->OutIdx >= 0) &&
-          (ePrev->Curr.X == e->Curr.X) && (ePrev->WindDelta != 0) &&
-          !(e->Bot == ePrev->Bot && e->Top == ePrev->Top))
+        while (ePrev && ePrev->Curr.X == e->Curr.X)
         {
-          IntPoint pt = e->Curr;
+          if (ePrev->OutIdx >= 0 && ePrev->WindDelta != 0 && 
+              !(e->Bot == ePrev->Bot && e->Top == ePrev->Top))
+          {
+            IntPoint pt = e->Curr;
 #ifdef use_xyz
-          SetZ(pt, *ePrev, *e);
+            SetZ(pt, *ePrev, *e);
 #endif
-          OutPt* op = AddOutPt(ePrev, pt);
-          OutPt* op2 = AddOutPt(e, pt);
-          AddJoin(op, op2, pt); //StrictlySimple (type-3) join
+            OutPt* op = AddOutPt(ePrev, pt);
+            OutPt* op2 = AddOutPt(e, pt);
+            AddJoin(op, op2, pt); //StrictlySimple (type-3) join
+          }
+          ePrev = ePrev->PrevInAEL;
         }
       }
 
