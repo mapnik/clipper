@@ -5070,9 +5070,9 @@ void Clipper::DoSimplePolygons()
                                 }
                                 if (!outrec->IsHole)
                                 {
-                                    OutPtIntersect intPt1 = { op, op2 };
-                                    OutPtIntersect intPt2 = { op2, op };
-                                    dupeRec.emplace(idx_j, intPt1);
+                                    OutPtIntersect intPt1 = { outrec->Pts, outrec2->Pts };
+                                    OutPtIntersect intPt2 = { outrec2->Pts, outrec->Pts };
+                                    dupeRec.emplace(outrec->Idx, intPt1);
                                     dupeRec.emplace(outrec2->Idx, intPt2);
                                 }
                             }
@@ -5137,9 +5137,9 @@ void Clipper::DoSimplePolygons()
                                 }
                                 if (!outrec2->IsHole)
                                 {
-                                    OutPtIntersect intPt1 = { op, op2 };
-                                    OutPtIntersect intPt2 = { op2, op };
-                                    dupeRec.emplace(idx_j, intPt1);
+                                    OutPtIntersect intPt1 = { outrec->Pts, outrec2->Pts };
+                                    OutPtIntersect intPt2 = { outrec2->Pts, outrec->Pts };
+                                    dupeRec.emplace(outrec->Idx, intPt1);
                                     dupeRec.emplace(outrec2->Idx, intPt2);
                                 }
                             }
@@ -5202,9 +5202,9 @@ void Clipper::DoSimplePolygons()
                                 }
                                 if (outrec2->IsHole)
                                 {
-                                    OutPtIntersect intPt1 = { op, op2 };
-                                    OutPtIntersect intPt2 = { op2, op };
-                                    dupeRec.emplace(idx_j, intPt1);
+                                    OutPtIntersect intPt1 = { outrec->Pts, outrec2->Pts };
+                                    OutPtIntersect intPt2 = { outrec2->Pts, outrec->Pts };
+                                    dupeRec.emplace(outrec->Idx, intPt1);
                                     dupeRec.emplace(outrec2->Idx, intPt2);
                                 }
                             }
