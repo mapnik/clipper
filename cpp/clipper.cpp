@@ -489,34 +489,19 @@ int PointInPolygon (const IntPoint &pt, OutPt *op)
   OutPt* startOp = op;
   for(;;)
   {
-    if (op->Next->Pt.Y == pt.Y)
-    {
-        if ((op->Next->Pt.X == pt.X) || (op->Pt.Y == pt.Y && 
-          ((op->Next->Pt.X > pt.X) == (op->Pt.X < pt.X)))) return -1;
-    }
     if ((op->Pt.Y < pt.Y) != (op->Next->Pt.Y < pt.Y))
     {
-      if (op->Pt.X >= pt.X)
-      {
-        if (op->Next->Pt.X > pt.X) result = 1 - result;
-        else
+        double d = (double)(op->Pt.X - pt.X) * (op->Next->Pt.Y - pt.Y) - 
+          (double)(op->Next->Pt.X - pt.X) * (op->Pt.Y - pt.Y);
+        if (!d)
         {
-          double d = (double)(op->Pt.X - pt.X) * (op->Next->Pt.Y - pt.Y) - 
-            (double)(op->Next->Pt.X - pt.X) * (op->Pt.Y - pt.Y);
-          if (!d) return -1;
-          if ((d > 0) == (op->Next->Pt.Y > op->Pt.Y)) result = 1 - result;
+            return -1;
         }
-      } else
-      {
-        if (op->Next->Pt.X > pt.X)
+        else if ((d > 0) == (op->Next->Pt.Y > op->Pt.Y))
         {
-          double d = (double)(op->Pt.X - pt.X) * (op->Next->Pt.Y - pt.Y) - 
-            (double)(op->Next->Pt.X - pt.X) * (op->Pt.Y - pt.Y);
-          if (!d) return -1;
-          if ((d > 0) == (op->Next->Pt.Y > op->Pt.Y)) result = 1 - result;
+            result = 1 - result;
         }
-      }
-    } 
+    }
     op = op->Next;
     if (startOp == op) break;
   } 
@@ -3144,7 +3129,14 @@ void Clipper::ProcessIntersectList()
 
 bool IntersectListSort(IntersectNode* node1, IntersectNode* node2)
 {
-  return node2->Pt.Y < node1->Pt.Y;
+    if (node2->Pt.Y != node1->Pt.Y)
+    {
+        return node2->Pt.Y < node1->Pt.Y;
+    }
+    else
+    {
+        return (node2->Edge1->WindCnt2 + node2->Edge2->WindCnt2) > (node1->Edge1->WindCnt2 + node1->Edge2->WindCnt2);
+    }
 }
 //------------------------------------------------------------------------------
 
