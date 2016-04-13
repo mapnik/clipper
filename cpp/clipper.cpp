@@ -1694,8 +1694,13 @@ void Clipper::FixHoleLinkage(OutRec &outrec)
       outrec.FirstLeft->Pts)) return;
 
   OutRec* orfl = outrec.FirstLeft;
-  while (orfl && ((orfl->IsHole == outrec.IsHole) || !orfl->Pts))
+  OutRec* first = orfl;
+  while (orfl && ((orfl->IsHole == outrec.IsHole) || !orfl->Pts)) {
       orfl = orfl->FirstLeft;
+      if (orfl == first) {
+          break;
+      }
+  }
   outrec.FirstLeft = orfl;
 }
 //------------------------------------------------------------------------------
